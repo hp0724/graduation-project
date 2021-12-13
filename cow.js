@@ -9,7 +9,7 @@ var imgArray = new Array();
 
 var poseImage;
 
-let yogi;
+let yoga;
 let poseLabel;
 
 var targetLabel;
@@ -20,6 +20,9 @@ var target;
 
 var timeLeft;
 
+let mistake = [];
+let trainer = [];
+
 function setup() {
   var canvas = createCanvas(640, 480);
   canvas.position(130, 210);
@@ -28,8 +31,8 @@ function setup() {
   poseNet = ml5.poseNet(video, modelLoaded);
   poseNet.on('pose', gotPoses);
 
- 
-  
+
+
   poseCounter = 0;
   targetLabel = 1;// targetLabel 설정 1은 mountain 2는 tree 3은 dog ... 
   target = posesArray[poseCounter];
@@ -40,47 +43,47 @@ function setup() {
   errorCounter = 0;
   iterationCounter = 0;
   //image 넣어주기 
-   
+
   let options = {
     inputs: 34,
     outputs: 4,
     task: 'classification',
     debug: true
   }
-  
-  yogi = ml5.neuralNetwork(options);
+
+  yoga = ml5.neuralNetwork(options);
   const modelInfo = {
     model: 'model/model.json',
     metadata: 'model/model_meta.json',
     weights: 'model/model.weights.bin',
   };
-  yogi.load(modelInfo, yogiLoaded);
+  yoga.load(modelInfo, yogaLoaded);
 }
-  
-function yogiLoaded(){
+
+function yogaLoaded() {
   console.log("Model ready!");
   classifyPose();
 }
 
 function classifyReady() {
-    state = 'waiting'
-    if (pose) {
-      let nose = pose.keypoints[0].score;
-      let ankleR = pose.keypoints[14].score;
-      state = 'detect'
-      if ((nose > 0.5) && (ankleR > 0.5)) {
-        //console.log('detect');
-        state = 'detect';
-      } else {
-        state = 'waiting';
-        //console.log('waiting');
-      }
+  state = 'waiting'
+  if (pose) {
+    let nose = pose.keypoints[0].score;
+    let ankleR = pose.keypoints[14].score;
+    state = 'detect'
+    if ((nose > 0.5) && (ankleR > 0.5)) {
+      //console.log('detect');
+      state = 'detect';
+    } else {
+      state = 'waiting';
+      //console.log('waiting');
     }
   }
+}
 
-function classifyPose(){
-    classifyReady();
-    if (pose && (state == 'detect')) {
+function classifyPose() {
+  classifyReady();
+  if (pose && (state == 'detect')) {
     let inputs = [];
     for (let i = 0; i < pose.keypoints.length; i++) {
       let x = pose.keypoints[i].position.x;
@@ -88,7 +91,7 @@ function classifyPose(){
       inputs.push(x);
       inputs.push(y);
     }
-    yogi.classify(inputs, gotResult);
+    yoga.classify(inputs, gotResult);
   } else {
     console.log("Pose not found");
     setTimeout(classifyPose, 100);
@@ -96,11 +99,11 @@ function classifyPose(){
 }
 
 function gotResult(error, results) {
-   
-  if (results[0].confidence > 0.70) {
+
+  if (results[0].confidence > 0.80) {
     console.log("Confidence");
     //사용자의 포즈와 targetlabel 1 =mountain 이 일치하는 경우 
-    if (results[0].label == "cow"){
+    if (results[0].label == "cow") {
       console.log(targetLabel);
       iterationCounter = iterationCounter + 1;
       //반복횟수 하나씩 늘리기 
@@ -111,40 +114,50 @@ function gotResult(error, results) {
         console.log("30!")
         iterationCounter = 0;
         //다음으로 넘어가 
-        console.log('pose success');;}
-      else{
+        console.log('pose success');
+        document.getElementById("time").textContent = "성공";
+
+      }
+      else {
         console.log("doin this")
         ////1초씩 줄이기 
         timeLeft = timeLeft - 1;
         //시간이 10보다 작은면 
-        if (timeLeft < 10){
+        if (timeLeft < 10) {
           document.getElementById("time").textContent = "00:0" + timeLeft;
         } //시간이 10보다 크면  
-        else{
-        document.getElementById("time").textContent = "00:" + timeLeft;}
-        setTimeout(classifyPose, 1000);}}
-    else{
+        else {
+          document.getElementById("time").textContent = "00:" + timeLeft;
+        }
+        savePose();
+      }
+    }
+    else {
       //사용자의 포즈와 targetlabel =mountain이 일치하지 않은경우 
       errorCounter = errorCounter + 1;
       console.log("error");
-      if (errorCounter >= 4){
+      if (errorCounter >= 4) {
         console.log("four errors");
         iterationCounter = 0;
         timeLeft = 10;
-        if (timeLeft < 10){
+        if (timeLeft < 10) {
           document.getElementById("time").textContent = "00:0" + timeLeft;
-        }else{
-        document.getElementById("time").textContent = "00:" + timeLeft;}
+        } else {
+          document.getElementById("time").textContent = "00:" + timeLeft;
+        }
         errorCounter = 0;
         setTimeout(classifyPose, 100);
-      }else{
+      } else {
         setTimeout(classifyPose, 100);
-      }}}
+      }
+    }
+  }
   // confidence 넘지 못했을떄 
-  else{
+  else {
     console.log("whatwe really dont want")
     setTimeout(classifyPose, 100);
-}}
+  }
+}
 
 
 function gotPoses(poses) {
@@ -162,51 +175,157 @@ function modelLoaded() {
 function draw() {
   push();
   translate(video.width, 0);
-  scale(-1,1);
+  scale(-1, 1);
   image(video, 0, 0, video.width, video.height);
-  
+
   if (pose) {
     for (let i = 0; i < skeleton.length; i++) {
       let a = skeleton[i][0];
       let b = skeleton[i][1];
-      strokeWeight(8);
-      stroke(244, 194, 194);
+      strokeWeight(6);
+      stroke(0, 255, 0);
       line(a.position.x, a.position.y, b.position.x, b.position.y);
+    }
+
+    for (let i = 0; i < skeleton.length; i++) {
+      let a = skeleton[i][0];
+      let b = skeleton[i][1];
+
+
+      // ellipse(x, y, 16, 16);
+      //mistake 부분 색깔 변경 
+      if (mistake.includes(i)) {
+        stroke(255, 0, 0);
+        strokeWeight(6);
+        line(a.position.x, a.position.y, b.position.x, b.position.y);
+      }
     }
   }
   pop();
-  fill(255,204,0);
+  fill(255, 204, 0);
   noStroke();
   textSize(60);
   textAlign(CENTER, CENTER);
   text(state, width * 0.85, height * 0.1);
 }
 
-// function nextPose(){
-//   //pose 완료했을떄 
-//   if (poseCounter >= 5) {
-//     console.log("Well done, you have learnt all poses!");
-//     document.getElementById("finish").textContent = "Amazing!";
-//     document.getElementById("welldone").textContent = "All poses done.";
-//     document.getElementById("sparkles").style.display = 'block';
-//   }//pose 진행중 
-//   else{
-//     console.log("Well done, you all poses!");
-//     //var stars = document.getElementById("starsid");
-//     //stars.classList.add("stars.animated");
-//     errorCounter = 0;
-//     iterationCounter = 0;
-//     //한개씩 늘려서 다음포즈 진행 
-//     poseCounter = poseCounter + 1;
-//     targetLabel = poseCounter + 1;
-//     console.log("next pose target label" + targetLabel)
-//     target = posesArray[poseCounter];
-//     document.getElementById("poseName").textContent = target;
-//     document.getElementById("welldone").textContent = "Well done, next pose!";
-//     document.getElementById("sparkles").style.display = 'block';
-//     document.getElementById("poseImg").src = imgArray[poseCounter].src;
-//     console.log("classifying again");
-//     timeLeft = 10;
-//     document.getElementById("time").textContent = "00:" + timeLeft;
-//     setTimeout(classifyPose, 4000)}
-// }
+
+function trainerAngle() {
+  trainer[0] = 94.20198072888545
+  trainer[1] = 272.40695615312336
+  trainer[2] = 147.73918135874624
+  trainer[3] = 223.04804443735412
+  trainer[4] = 178.1298231121244
+  trainer[5] = 175.88833420871455
+  trainer[6] =  237.17760837396125
+  trainer[7] =  125.26682220024756
+}
+
+function savePose() {
+  input = [];
+  console.log(pose);
+  for (let i = 0; i < pose.keypoints.length; i++) {
+    let x = pose.keypoints[i].position.x;
+    let y = pose.keypoints[i].position.y;
+    input.push(x);
+    input.push(y);
+  }
+  calcAngle();
+}
+
+function calcAngle() {
+  angle = [];
+  // 0:왼쪽 무릎 각도 구하기        왼쪽 발목 x  - 왼쪽 무릎x  왼쪽발목 y - 왼쪽 무릎 y                     왼쪽 힙 x -왼쪽 무릎 x     왼쪽 힙 y - 왼쪽 무릎 y
+  angle[0] = (Math.abs((Math.atan2(input[31] - input[27], input[30] - input[26])) + Math.abs(Math.atan2(input[23] - input[27], input[22] - input[26])))) * (180 / Math.PI);
+  // 1:오른쪽 무릎 각도 구하기        오른쪽 발목 x  - 오른쪽 무릎x  오른쪽발목 y - 오른쪽 무릎 y        오른쪽 힙 x -오른쪽 무릎 x     오른쪽 힙 y - 오른쪽 무릎 y
+  angle[1] = 360 - (Math.abs((Math.atan2(input[33] - input[29], input[32] - input[28])) + Math.abs(Math.atan2(input[25] - input[29], input[24] - input[28])))) * (180 / Math.PI);
+  //2:왼쪽 힙 각도 구하기           왼쪽 무릎 x - 왼쪽 힙 x , 왼쪽 무릎y - 왼쪽 힙 y                 왼쪽 어꺠 x -왼쪽 힙 x        왼쪽 어꺠 y - 왼쪽 힙 y 
+  angle[2] = (Math.abs(Math.atan2(input[27] - input[23], input[26] - input[22])) + Math.abs(Math.atan2(input[11] - input[23], input[10] - input[22]))) * (180 / Math.PI);
+  //3:오른쪽 힙 각도 구하기           오른쪽 무릎 x - 오른쪽 힙 x , 오른쪽 무릎y - 오른쪽 힙 y                 오른쪽 어꺠 x -오른쪽 힙 x        오른쪽 어꺠 y - 오른쪽 힙 y 
+  angle[3] = 360 - (Math.abs(Math.atan2(input[29] - input[25], input[28] - input[24])) + Math.abs(Math.atan2(input[13] - input[25], input[12] - input[24]))) * (180 / Math.PI);
+  //4:왼쪽 팔꿈치 각도 구하기     왼쪽 손목 x -왼쪽 팔꿈치 x , 왼쪽 손목 y - 왼쪽 팔꿈치 y                 왼쪽 어깨 x- 왼쪽 팔꿈치 x    왼쪽 어깨 y- 왼쪽 팔꿈치 y
+  angle[4] = (Math.abs(Math.atan2(input[19] - input[15], input[18] - input[14])) + Math.abs(Math.atan2(input[11] - input[15], input[10] - input[14]))) * (180 / Math.PI);
+  //5:오른쪽 팔꿈치 각도 구하기     오른쪽 손목 x -오른쪽 팔꿈치 x , 오른쪽 손목 y - 오른쪽 팔꿈치 y                 오른쪽 어깨 x- 오른쪽 팔꿈치 x    오른쪽 어깨 y- 오른 쪽 팔꿈치 y
+  angle[5] = 360 - (Math.abs(Math.atan2(input[21] - input[17], input[20] - input[16])) + Math.abs(Math.atan2(input[13] - input[17], input[12] - input[16]))) * (180 / Math.PI);
+  //6:왼쪽 겨드랑이 각도 구하기       왼쪽 힙 x - 왼쪽 어깨 x  왼쪽 힙 y -왼쪽 어꺠 y        왼쪽 팔꿈치 x- 왼쪽 어꺠 x               왼쪽 팔꿈치 y- 왼쪽 어꺠 y  
+  angle[6] = (Math.abs(Math.atan2(input[23] - input[11], input[22] - input[10])) + Math.abs(Math.atan2(input[15] - input[11], input[14] - input[10]))) * (180 / Math.PI);
+  //7:오른쪽 겨드랑이 각도 구하기       오른쪽 힙 x - 오른쪽 어깨 x  오른쪽 힙 y -오른쪽 어꺠 y        오른쪽 팔꿈치 x- 오른쪽 어꺠 x               오른쪽 팔꿈치 y- 오른쪽 어꺠 y  
+  angle[7] = 360 - (Math.abs(Math.atan2(input[17] - input[13], input[16] - input[12])) + Math.abs(Math.atan2(input[25] - input[13], input[24] - input[12]))) * (180 / Math.PI);
+  cmpAngle();
+}
+
+function cmpAngle() {
+  let cmp;
+  let pass = true;
+  mistake = [];
+  trainerAngle();
+  console.log("cmp angle")
+  $('.mistake-list').text("");
+  for (let i = 0; i < 8; i++) {
+    //사용자의 각도 와 트레이너 각도의 차이 
+    cmp = angle[i] - trainer[i];
+    //각도가 30 이상 차이나면 표시 
+    if (Math.abs(cmp) > 30) {
+      console.log(trainer[i]);
+      console.log(angle[i]);
+      console.log(cmp);
+      pass = false;
+      switch (i) {
+        case 0:
+          $('.mistake-list').append("왼쪽 무릎 ", abs(int(cmp)), "° ");
+          mistake.push(13);
+          break;
+        case 1:
+          $('.mistake-list').append("오른쪽 무릎 ", abs(int(cmp)), "° ");
+          mistake.push(14);
+          break;
+        case 2:
+          $('.mistake-list').append("왼쪽 상체와 하체 ", abs(int(cmp)), "° ");
+          mistake.push(11);
+          break;
+        case 3:
+          $('.mistake-list').append("오른쪽 상체와 하체 ", abs(int(cmp)), "° ");
+          mistake.push(12);
+          break;
+        case 4:
+          $('.mistake-list').append("왼쪽 팔꿈치 ", abs(int(cmp)), "° ");
+          mistake.push(7);
+          break;
+        case 5:
+          $('.mistake-list').append("오른쪽 팔꿈치 ", abs(int(cmp)), "° ");
+          mistake.push(8);
+          break;
+        case 6:
+          $('.mistake-list').append("왼쪽 팔과 상체 ", abs(int(cmp)), "° ");
+          mistake.push(5);
+          break;
+        case 7:
+          $('.mistake-list').append("오른쪽 팔과 상체 ", abs(int(cmp)), "° ");
+          mistake.push(6);
+          break;
+      }
+      if (cmp > 0) {
+        $('.mistake-list').append("더 구부리세요.<br>");
+      } else {
+        $('.mistake-list').append("더 펴세요.<br>");
+      }
+    }
+  }
+
+  if (pass) {
+    // 5초간 유지하세요
+    console.log("1초씩 증가 -1");
+    //   iterationCounter=iterationCounter+1
+    //   timeLeft=timeLeft-1
+    setTimeout(classifyPose, 1000);
+
+  } else {
+    //   // 3초 후 다시 측정합니다.
+    //   console.log("3s start");
+    //   setTimeout(savePose, 3000);
+    //   timer(3);
+    // }
+    console.log("1초씩 증가 -2");
+    setTimeout(classifyPose, 1000);
+  }
+}
